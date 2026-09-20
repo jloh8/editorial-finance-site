@@ -81,6 +81,12 @@ svg.chart{width:100%;height:auto;display:block}
 .abtn.warn{color:var(--accent);border-color:#e5a9a9}
 .abtn:disabled{opacity:.45;cursor:default}
 .hint{font-size:13px;color:var(--muted);margin:14px 0 0}
+.revbox{margin-top:14px}
+.revbox label{display:block;font-size:14px;font-weight:700;margin-bottom:6px}
+.revbox textarea{width:100%;min-height:110px;font-size:16px;line-height:1.5;border:1px solid var(--line);
+  border-radius:12px;padding:12px;font-family:inherit;resize:vertical;background:#fff;color:var(--ink)}
+.revnotes{background:#fdf3e3;border:1px solid #e3c98f;border-radius:12px;padding:12px 14px;margin-top:14px;font-size:15px}
+.revnotes strong{display:block;font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--amber);margin-bottom:4px}
 footer{border-top:1px solid var(--line);margin-top:50px;padding:22px 0;font-size:13px;color:var(--muted)}
 [hidden]{display:none!important}
 </style>
@@ -284,6 +290,15 @@ footer{border-top:1px solid var(--line);margin-top:50px;padding:22px 0;font-size
       <button class="abtn primary" id="btnApprove">Approve &amp; publish</button>
       <button class="abtn warn" id="btnReturn">Return for revision</button>
     </div>
+    <div class="revbox" id="revBox" hidden>
+      <label for="revComment">Revision notes for the writer</label>
+      <textarea id="revComment" placeholder="What needs to change before this can publish?"></textarea>
+      <div class="actions">
+        <button class="abtn primary" id="btnSubmitRev">Submit revision notes</button>
+        <button class="abtn" id="btnCancelRev">Cancel</button>
+      </div>
+    </div>
+    <p class="revnotes" id="revNotes" hidden><strong>Revision notes</strong><span id="revNotesText"></span></p>
     <p class="hint">Prototype: review state is stored in this browser only (localStorage). It does not sync between devices.</p>
   </div>
 </main>
@@ -308,6 +323,10 @@ footer{border-top:1px solid var(--line);margin-top:50px;padding:22px 0;font-size
   var draftStatus = document.getElementById("draftStatus");
   var queueCount = document.getElementById("queueCount");
   var btnApprove = document.getElementById("btnApprove");
+  var revBox = document.getElementById("revBox");
+  var revComment = document.getElementById("revComment");
+  var revNotes = document.getElementById("revNotes");
+  var revNotesText = document.getElementById("revNotesText");
 
   var state = loadState();
 
@@ -330,6 +349,12 @@ footer{border-top:1px solid var(--line);margin-top:50px;padding:22px 0;font-size
       pubPill.textContent = "In review — not yet published";
     }
     draftStatus.textContent = statusLabel(state.status);
+    if(state.note){
+      revNotesText.textContent = state.note;
+      revNotes.hidden = false;
+    } else {
+      revNotes.hidden = true;
+    }
     queueCount.textContent = state.status==="in_review" ? "1" : "0";
     btnApprove.disabled = state.status==="published";
     btnApprove.textContent = state.status==="published" ? "Published ✓" : "Approve & publish";
@@ -352,8 +377,21 @@ footer{border-top:1px solid var(--line);margin-top:50px;padding:22px 0;font-size
     saveState(state); render();
   });
   document.getElementById("btnReturn").addEventListener("click", function(){
-    state = {status:"needs_revision", ts: Date.now()};
-    saveState(state); render();
+    revComment.value = state.note || "";
+    revNotes.hidden = true;
+    revBox.hidden = false;
+    revComment.focus();
+  });
+  document.getElementById("btnCancelRev").addEventListener("click", function(){
+    revBox.hidden = true;
+    render();
+  });
+  document.getElementById("btnSubmitRev").addEventListener("click", function(){
+    var note = revComment.value.trim();
+    state = {status:"needs_revision", ts: Date.now(), note: note || state.note || ""};
+    saveState(state);
+    revBox.hidden = true;
+    render();
   });
 
   /* ---- Population chart (inline SVG, generated from sourced data) ---- */
